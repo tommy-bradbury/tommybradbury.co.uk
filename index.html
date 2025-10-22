@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tommy Bradbury!!</title>
+  <style>
+    body {
+      background-color: hotpink;
+      text-align: center;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      padding: 50px;
+    }
+
+    .spin-text {
+      font-size: 50px;
+      color: yellow;
+      text-shadow: 3px 3px red;
+      animation: spin 4s linear infinite;
+    }
+
+    .pulse-text {
+      font-size: 40px;
+      color: lime;
+      text-shadow: 2px 2px purple;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.5); }
+    }
+
+    img {
+      margin: 20px;
+      border: 10px dashed cyan;
+    }
+  </style>
+</head>
+<body>
+
+    <h1 class="spin-text">God Save the King</h1>
+    <img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExd3VqdHF6MDNyZmpndHZrbHFzNnFwOHJ3dDc0MXI3M3o2NHZpc3h5cSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/nXQZ2BQ2VtbZC/giphy.gif" alt="Royal GIF">
+    <img src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHBvZjNja2plM3NxZmJxcG9jaHFhM2xmajNiYWUxNjc1NGJmd2dwZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/AVSl859um5sCA/giphy.gif" alt="Cool GIF">
+    <h2 class="pulse-text">I love xdrive</h2>
+    <button id="corsTestButton">
+        I FREAKING LOVE TESTING API CORS POLICIES
+    </button>
+    <script>
+        document.getElementById('corsTestButton').addEventListener('click', attemptCorsCall);
+
+        function attemptCorsCall() {
+            const url = 'https://api.tommybradbury.co.uk/auth/jason';
+
+            fetch(url)
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+                    }
+                })
+                .then(data => {
+                    alert(data.substring(0, 200));
+                })
+                .catch(error => {
+                    console.error('Fetch Error:', error);
+                    alert(`failed.\n\nReason: ${error.message}.`);
+                });
+        }
+    </script>
+
+</body>
+</html>
