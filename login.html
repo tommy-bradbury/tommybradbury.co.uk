@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Access Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary-blue': '#4F46E5', // Indigo 600
+                        'secondary-gray': '#F9FAFB', // Gray 50
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center font-sans p-4">
+
+    <div class="w-full max-w-sm">
+        <div class="bg-white shadow-xl rounded-xl p-8 space-y-6 border border-gray-200">
+            <h1 class="text-3xl font-extrabold text-gray-900 text-center">
+                Log In
+            </h1>
+            <p id="message" class="text-center text-sm font-medium text-primary-blue h-5 transition-all duration-300"></p>
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="email" name="email" required value="email@example.com" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150 ease-in-out placeholder-gray-400" placeholder="Enter your email">
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" name="password" required value="meme" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue transition duration-150 ease-in-out placeholder-gray-400" placeholder="Enter your password">
+                </div>
+                
+                <button type="submit" id="loginButton" class="w-full bg-primary-blue text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition duration-300 ease-in-out shadow-md hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-primary-blue focus:ring-opacity-50" aria-live="polite">
+                    Log In
+                </button>
+            </form>
+
+            <div class="pt-4 border-t border-gray-100 space-y-4">
+                <p class="text-sm text-gray-500">
+                    <span class="font-bold">Session Status:</span> 
+                    <span id="sessionStatus" class="text-xs font-mono bg-yellow-100 text-yellow-800 p-1 rounded-md">Not Logged In</span>
+                </p>
+                <button id="profileButton" disabled class="w-full bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition duration-300 ease-in-out shadow-md focus:outline-none focus:ring-4 focus:ring-green-500 focus:ring-opacity-50 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">
+                    Test Authentication (Send 'session' Cookie)
+                </button>
+                <p id="profileResult" class="text-center text-sm font-medium h-5 transition-all duration-300 text-gray-600"></p>
+                <button id="logoutButton" disabled class="w-full bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 transition duration-300 ease-in-out shadow-md focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-opacity-50 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">
+                    Log Out (Clear Local Status)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        let API_BASE_URL;
+        if(location.hostname === 'localhost') {
+            API_BASE_URL = 'http://localhost:8000/auth';
+        } else {
+            API_BASE_URL = 'https://api.tommybradbury.co.uk/auth';
+        }
+        const LOGIN_API_URL = `${API_BASE_URL}/login`;
+        const STATUS_API_URL = `${API_BASE_URL}/status`;
+        const LOGOUT_API_URL = `${API_BASE_URL}/logout`; 
+        const loginForm = document.getElementById('loginForm');
+        const messageEl = document.getElementById('message');
+        const loginButton = document.getElementById('loginButton');
+        const profileButton = document.getElementById('profileButton');
+        const profileResultEl = document.getElementById('profileResult');
+        const sessionStatusEl = document.getElementById('sessionStatus');
+        const logoutButton = document.getElementById('logoutButton');
+        let isAuthenticated = false;
+
+        /**
+         * Updates the UI toi show auth state.
+         * @param boolean loggedIn 
+         */
+        function updateUIState(loggedIn) {
+            isAuthenticated = loggedIn;
+            
+            if(loggedIn) {
+                sessionStatusEl.textContent = 'Active Session (Secure Cookie Set)';
+                sessionStatusEl.classList.remove('bg-yellow-100', 'text-yellow-800');
+                sessionStatusEl.classList.add('bg-green-100', 'text-green-800');
+                profileButton.disabled = false;
+                logoutButton.disabled = false;
+                loginButton.disabled = true;
+                loginButton.textContent = 'Signed In';
+            } else {
+                sessionStatusEl.textContent = 'Not Logged In';
+                sessionStatusEl.classList.add('bg-yellow-100', 'text-yellow-800');
+                sessionStatusEl.classList.remove('bg-green-100', 'text-green-800');
+                profileButton.disabled = true;
+                logoutButton.disabled = true;
+                loginButton.disabled = false;
+                loginButton.textContent = 'Log In';
+            }
+        }
+
+        /**
+         * Attempt login via API
+         * @param string email - User's email.
+         * @param string password - User's password.
+         */
+        async function handleLogin(email, password) {
+            loginButton.disabled = true;
+            loginButton.textContent = 'Authenticating...';
+            messageEl.textContent = '';
+            messageEl.classList.remove('text-red-500', 'text-green-500');
+
+            try {
+                const response = await fetch(LOGIN_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include', 
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    messageEl.textContent = 'Login Successful! Secure session cookie stored by browser.';
+                    messageEl.classList.add('text-green-500');
+                    updateUIState(true);
+                } else {
+                    let errorText = 'Login Failed.';
+                    try {
+                        const errorData = await response.json();
+                        errorText = errorData.error || errorText;
+                    } catch (e) {
+                        errorText += ` (HTTP Status: ${response.status})`;
+                    }
+
+                    messageEl.textContent = errorText;
+                    messageEl.classList.add('text-red-500');
+                }
+
+            } catch (error) {
+                console.error('API Call Error:', error);
+                messageEl.textContent = `Network Error: Could not reach ${LOGIN_API_URL}`;
+                messageEl.classList.add('text-red-500');
+            } finally {
+                if (!isAuthenticated) {
+                    loginButton.disabled = false;
+                    loginButton.textContent = 'Log In';
+                }
+            }
+        }
+        
+        /**
+         * temporary measure to verify logged in status
+         * 
+         */
+        async function checkProfile() {
+            profileButton.disabled = true;
+            profileButton.textContent = 'Testing Authentication...';
+            profileResultEl.textContent = '';
+            profileResultEl.classList.remove('text-red-500', 'text-green-500');
+
+            try {
+                const response = await fetch(STATUS_API_URL, {
+                    method: 'GET',
+                    credentials: 'include',
+                });
+
+                if(response.ok) {
+                    profileResultEl.textContent = 'Logged in';
+                    profileResultEl.classList.add('text-green-500');
+                } else if(response.status === 401 || response.status === 403) {
+                    profileResultEl.textContent = 'Access Denied: Session cookie is missing or invalid.';
+                    profileResultEl.classList.add('text-red-500');
+                    updateUIState(false);
+                } else {
+                    profileResultEl.textContent = `API Error: Status ${response.status}`;
+                    profileResultEl.classList.add('text-red-500');
+                }
+                
+            } catch (error) {
+                console.error('Profile Check Error:', error);
+                profileResultEl.textContent = 'Network Error during authenticated check.';
+                profileResultEl.classList.add('text-red-500');
+            } finally {
+                profileButton.disabled = false;
+                profileButton.textContent = 'Test Authentication (Send \'session\' Cookie)';
+            }
+        }
+
+        async function logout() {
+            await fetch(LOGOUT_API_URL, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            updateUIState(false);
+            messageEl.textContent = 'Local session status cleared. The server cookie remains until expired or cleared by a server logout endpoint.';
+            messageEl.classList.add('text-primary-blue');
+            profileResultEl.textContent = '';
+        }
+
+
+        
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            handleLogin(email, password);
+        });
+
+        profileButton.addEventListener('click', checkProfile);
+        logoutButton.addEventListener('click', logout);
+        window.onload = () => updateUIState(false); 
+    </script>
+</body>
+</html>
